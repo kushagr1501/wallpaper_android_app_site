@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './Hero.css';
 
 const COLORS = [
@@ -19,6 +19,230 @@ const LAYOUTS = [
 const FONTS = ['Thin', 'Light', 'Regular', 'Medium', 'Bold', 'Serif', 'Mono'];
 const SHAPES = ['Rounded', 'Circle', 'Square'];
 const SIZES = ['Small', 'Medium', 'Large'];
+
+
+const SlideToDownload = ({ accentColor, downloadUrl }) => {
+    const [isDragging, setIsDragging] = useState(false);
+    const [position, setPosition] = useState(0);
+    const [isComplete, setIsComplete] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
+    const trackRef = useRef(null);
+    const startXRef = useRef(0);
+    const currentPosRef = useRef(0);
+
+    const KNOB_WIDTH = 56;
+    const THRESHOLD = 0.85;
+
+    const getMaxPosition = () => {
+        if (!trackRef.current) return 200;
+        return trackRef.current.offsetWidth - KNOB_WIDTH - 8;
+    };
+
+    const handleStart = (clientX) => {
+        if (isComplete || isResetting) return;
+        setIsDragging(true);
+        startXRef.current = clientX - currentPosRef.current;
+    };
+
+    const handleMove = (clientX) => {
+        if (!isDragging || isComplete || !trackRef.current) return;
+
+        const maxPos = getMaxPosition();
+        let newPos = clientX - startXRef.current;
+
+        newPos = Math.max(0, Math.min(newPos, maxPos));
+        currentPosRef.current = newPos;
+        setPosition(newPos);
+    };
+
+    const handleEnd = () => {
+        if (!isDragging) return;
+        setIsDragging(false);
+
+        const maxPos = getMaxPosition();
+        const progress = position / maxPos;
+
+        if (progress >= THRESHOLD) {
+            setPosition(maxPos);
+            currentPosRef.current = maxPos;
+            setIsComplete(true);
+
+            setTimeout(() => {
+                window.open(downloadUrl, '_blank');
+
+                setTimeout(() => {
+                    setIsResetting(true);
+                    setPosition(0);
+                    currentPosRef.current = 0;
+                    setTimeout(() => {
+                        setIsComplete(false);
+                        setIsResetting(false);
+                    }, 400);
+                }, 1000);
+            }, 300);
+        } else {
+            setIsResetting(true);
+            setPosition(0);
+            currentPosRef.current = 0;
+            setTimeout(() => setIsResetting(false), 300);
+        }
+    };
+
+
+    const handleMouseDown = (e) => {
+        e.preventDefault();
+        handleStart(e.clientX);
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            handleMove(e.clientX);
+        };
+
+        const handleMouseUp = () => {
+            handleEnd();
+        };
+
+        const handleTouchMove = (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                handleMove(e.touches[0].clientX);
+            }
+        };
+
+        const handleTouchEnd = () => {
+            handleEnd();
+        };
+
+        if (isDragging) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+            window.addEventListener('touchmove', handleTouchMove, { passive: false });
+            window.addEventListener('touchend', handleTouchEnd);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [isDragging, position, isComplete]);
+
+    const handleTouchStart = (e) => {
+        handleStart(e.touches[0].clientX);
+    };
+
+    const maxPos = getMaxPosition();
+    const progress = maxPos > 0 ? position / maxPos : 0;
+
+    return (
+        <div
+            className={`slide-download ${isDragging ? 'dragging' : ''} ${isComplete ? 'complete' : ''} ${isResetting ? 'resetting' : ''}`}
+            ref={trackRef}
+            style={{
+                '--accent': accentColor,
+                '--progress': progress,
+            }}
+        >
+
+            <div
+                className="slide-fill"
+                style={{
+                    width: `${position + KNOB_WIDTH + 4}px`,
+                    background: `linear-gradient(90deg, ${accentColor}25 0%, ${accentColor}40 100%)`,
+                }}
+            />
+
+
+            <div className="slide-text">
+                <span className="slide-text-content">
+                    {isComplete ? 'Downloading...' : 'Slide to Download'}
+                </span>
+                <div className="slide-shimmer" />
+            </div>
+
+
+            <span
+                className="slide-badge"
+                style={{
+                    opacity: Math.max(0, 1 - progress * 1.5),
+                    transform: `translateX(${-progress * 20}px)`,
+                }}
+            >
+            </span>
+
+
+            <div
+                className={`slide-cat ${isDragging ? 'running' : ''} ${isComplete ? 'celebrate' : ''}`}
+                style={{
+                    transform: `translateX(${position}px) translateY(-50%)`,
+                }}
+            >
+                <svg viewBox="0 0 80 70" width="44" height="38">
+                    <ellipse className="cat-body" cx="35" cy="40" rx="22" ry="16" fill="#fff" />
+
+                    <circle className="cat-head" cx="58" cy="30" r="13" fill="#fff" />
+                    <polygon className="cat-ear" points="49,20 53,6 58,18" fill="#fff" />
+                    <polygon className="cat-ear" points="62,18 67,6 72,20" fill="#fff" />
+                    <polygon points="51,19 53,10 56,18" fill="#ffb6c1" />
+                    <polygon points="63,18 67,10 70,19" fill="#ffb6c1" />
+
+                    <circle cx="53" cy="28" r="2" fill="#333" />
+                    <circle cx="63" cy="28" r="2" fill="#333" />
+                    <ellipse cx="58" cy="33" rx="2" ry="1.5" fill="#ffb6c1" />
+
+                    <g stroke="#333" strokeWidth="0.5" opacity="0.5">
+                        <line x1="48" y1="31" x2="38" y2="29" />
+                        <line x1="48" y1="33" x2="38" y2="33" />
+                        <line x1="48" y1="35" x2="38" y2="37" />
+                        <line x1="68" y1="31" x2="78" y2="29" />
+                        <line x1="68" y1="33" x2="78" y2="33" />
+                        <line x1="68" y1="35" x2="78" y2="37" />
+                    </g>
+
+                    <path className="cat-tail" d="M13,40 Q0,25 5,15" stroke="#fff" strokeWidth="5" fill="none" strokeLinecap="round" />
+
+                    <g className="cat-legs-back">
+                        <rect className="cat-leg-bl" x="18" y="50" width="5" height="14" rx="2.5" fill="#fff" />
+                        <rect className="cat-leg-br" x="28" y="50" width="5" height="14" rx="2.5" fill="#fff" />
+                    </g>
+                    <g className="cat-legs-front">
+                        <rect className="cat-leg-fl" x="42" y="50" width="5" height="14" rx="2.5" fill="#fff" />
+                        <rect className="cat-leg-fr" x="52" y="50" width="5" height="14" rx="2.5" fill="#fff" />
+                    </g>
+                </svg>
+            </div>
+
+
+            <div
+                className="slide-knob"
+                style={{
+                    transform: `translateX(${position}px)`,
+                    background: isComplete ? accentColor : 'transparent',
+                    boxShadow: isComplete ? `0 4px 20px rgba(0,0,0,0.3)` : 'none',
+                }}
+                onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
+            >
+                {isComplete && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                )}
+            </div>
+
+            <div
+                className="slide-glow"
+                style={{
+                    left: `${position + KNOB_WIDTH / 2}px`,
+                    opacity: isDragging ? 0.5 : 0,
+                    background: accentColor,
+                }}
+            />
+        </div>
+    );
+};
 
 const Hero = () => {
     const [activeColor, setActiveColor] = useState(COLORS[0]);
@@ -77,6 +301,8 @@ const Hero = () => {
     const dotRadius = getDotRadius();
     const fontStyle = getFontStyle();
 
+    const downloadUrl = "https://github.com/kushagr1501/wallpaper_android_app_site/releases/latest/download/year_dots.apk";
+
     return (
         <section className={`hero ${loaded ? 'loaded' : ''}`}>
             <div className="hero-bg">
@@ -111,25 +337,19 @@ const Hero = () => {
                     <span className="brand-tag">2026</span>
                 </div>
 
-                {/* <div className="nav-links">
-                    <a href="#features" className="nav-link">Features</a>
-                    <a href="#preview" className="nav-link">Preview</a>
-                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="nav-link">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                <div className="nav-socials">
+                    <a href="https://x.com/Kushagraa1501" target="_blank" rel="noopener noreferrer" className="social-link" title="Follow on X">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                         </svg>
                     </a>
-                </div> */}
-
-                <a href="/year_dots.apk" download className="nav-cta">
-                    <span className="cta-glow" style={{ background: activeColor.value }} />
-                    <span className="cta-text">Download</span>
-                    <span className="cta-icon">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    {/* <div className="social-sep" /> */}
+                    {/* <a href="https://github.com/yourhandle" target="_blank" rel="noopener noreferrer" className="social-link" title="View on GitHub">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                         </svg>
-                    </span>
-                </a>
+                    </a> */}
+                </div>
             </nav>
 
             <div className="hero-main">
@@ -137,7 +357,6 @@ const Hero = () => {
                     <div className="hero-eyebrow">
                         <div className="eyebrow-line" style={{ background: activeColor.value }} />
                         <span className="eyebrow-text">Live Wallpaper for Android</span>
-
                     </div>
 
                     <h1 className="hero-title">
@@ -159,24 +378,13 @@ const Hero = () => {
                     </p>
 
                     <div className="hero-actions">
-                        <a
-                            href="https://github.com/kushagr1501/wallpaper_android_app_site/releases/latest/download/year_dots.apk"
-                            target="_blank"
-                            className="btn-primary"
-                            style={{ '--accent': activeColor.value }}
-                        >
-
-                            <span className="btn-bg" />
-                            <span className="btn-content">
-                                <span>Download Free</span>
-                                <span className="btn-badge">APK</span>
-                            </span>
-                        </a>
-
-
+                        <SlideToDownload
+                            accentColor={activeColor.value}
+                            downloadUrl={downloadUrl}
+                        />
                     </div>
 
-
+                    <p className="hero-hint">Android 7.0+ · No ads · Free forever</p>
                 </div>
 
                 <div className="hero-phone">
@@ -186,9 +394,9 @@ const Hero = () => {
                             <div className="phone-notch" />
                             <div className="phone-screen">
                                 {showClock ? (
-                                    <span className="screen-time">9:41</span>
+                                    <span className="screen-time" style={fontStyle}>9:41</span>
                                 ) : (
-                                    <div style={{ height: 60 }} /> /* Spacer to keep layout stable */
+                                    <div style={{ height: 60 }} />
                                 )}
                                 <span className="screen-date">Thursday, January 30</span>
 
@@ -257,8 +465,6 @@ const Hero = () => {
                 </div>
 
                 <div className="sidebar">
-
-
                     <div className="ctrl-group">
                         <label className="ctrl-label">Accent Color</label>
                         <div className="color-row">
@@ -304,7 +510,7 @@ const Hero = () => {
                     <span className="ctrl-heading">More Options</span>
 
                     <div className="ctrl-group">
-                        <label className="ctrl-label">Font Weight</label>
+                        <label className="ctrl-label">Font Style</label>
                         <div className="btn-row">
                             {FONTS.map((f) => (
                                 <button
@@ -366,7 +572,7 @@ const Hero = () => {
 
                     <div className="ctrl-group">
                         <div className="ctrl-inline" style={{ marginBottom: 12 }}>
-                            <div><label className="ctrl-label">Show Clock</label></div>
+                            <div><label className="ctrl-label" style={{ marginBottom: 0 }}>Show Clock</label></div>
                             <button
                                 className={`toggle ${showClock ? 'on' : ''}`}
                                 onClick={() => setShowClock(!showClock)}
@@ -376,7 +582,7 @@ const Hero = () => {
                             </button>
                         </div>
                         <div className="ctrl-inline">
-                            <div><label className="ctrl-label">Show Stats</label></div>
+                            <div><label className="ctrl-label" style={{ marginBottom: 0 }}>Show Stats</label></div>
                             <button
                                 className={`toggle ${showStats ? 'on' : ''}`}
                                 onClick={() => setShowStats(!showStats)}
@@ -388,8 +594,6 @@ const Hero = () => {
                     </div>
                 </div>
             </div>
-
-
         </section>
     );
 };
