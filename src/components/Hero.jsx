@@ -159,7 +159,13 @@ const Hero = () => {
                     </p>
 
                     <div className="hero-actions">
-                        <a href="/year_dots.apk" download className="btn-primary" style={{ '--accent': activeColor.value }}>
+                        <a
+                            href="https://github.com/kushagr1501/wallpaper_android_app_site/releases/latest/download/year_dots.apk"
+                            target="_blank"
+                            className="btn-primary"
+                            style={{ '--accent': activeColor.value }}
+                        >
+
                             <span className="btn-bg" />
                             <span className="btn-content">
                                 <span>Download Free</span>
@@ -251,7 +257,7 @@ const Hero = () => {
                 </div>
 
                 <div className="sidebar">
-                                
+
 
                     <div className="ctrl-group">
                         <label className="ctrl-label">Accent Color</label>
