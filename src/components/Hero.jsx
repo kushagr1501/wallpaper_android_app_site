@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import './Hero.css';
-import { track } from '@vercel/analytics';
 
 const COLORS = [
     { name: 'White', value: '#FFFFFF' },
@@ -56,6 +55,7 @@ const SlideToDownload = ({ accentColor, downloadUrl }) => {
         setPosition(newPos);
     };
 
+
     const handleEnd = () => {
         if (!isDragging) return;
         setIsDragging(false);
@@ -67,12 +67,11 @@ const SlideToDownload = ({ accentColor, downloadUrl }) => {
             setPosition(maxPos);
             currentPosRef.current = maxPos;
             setIsComplete(true);
-            //tracking the download 
-            track('apk_download', {
-                accent_color: accentColor,
-                timestamp: new Date().toISOString(),
-                user_agent: navigator.userAgent
+            fetch("/api/notifyDownload", {
+                method: "POST",
+            }).catch(() => {
             });
+
 
             setTimeout(() => {
                 window.open(downloadUrl, '_blank');
